@@ -24,6 +24,15 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     !cart.email ||
     (cart.shipping_methods?.length ?? 0) < 1
 
+  const paidByCoins =
+    !!(cart as any)?.metadata?.points_cost && cart?.total === 0
+
+  if (paidByCoins) {
+    return (
+      <CoinPaymentButton notReady={notReady} data-testid={dataTestId} />
+    )
+  }
+
   const paymentSession = cart.payment_collection?.payment_sessions?.[0]
 
   switch (true) {
@@ -185,6 +194,50 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
       <ErrorMessage
         error={errorMessage}
         data-testid="manual-payment-error-message"
+      />
+    </>
+  )
+}
+
+const CoinPaymentButton = ({
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  notReady: boolean
+  "data-testid"?: string
+}) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const onPaymentCompleted = async () => {
+    await placeOrder()
+      .catch((err) => {
+        setErrorMessage(err.message)
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
+  }
+
+  const handlePayment = () => {
+    setSubmitting(true)
+    onPaymentCompleted()
+  }
+
+  return (
+    <>
+      <Button
+        disabled={notReady}
+        isLoading={submitting}
+        onClick={handlePayment}
+        size="large"
+        data-testid={dataTestId}
+      >
+        Place order with Coins
+      </Button>
+      <ErrorMessage
+        error={errorMessage}
+        data-testid="coin-payment-error-message"
       />
     </>
   )

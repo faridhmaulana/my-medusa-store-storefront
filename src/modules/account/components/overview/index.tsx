@@ -8,9 +8,10 @@ import { HttpTypes } from "@medusajs/types"
 type OverviewProps = {
   customer: HttpTypes.StoreCustomer | null
   orders: HttpTypes.StoreOrder[] | null
+  coinBalance?: number
 }
 
-const Overview = ({ customer, orders }: OverviewProps) => {
+const Overview = ({ customer, orders, coinBalance = 0 }: OverviewProps) => {
   return (
     <div data-testid="overview-page-wrapper">
       <div className="hidden small:block">
@@ -60,6 +61,22 @@ const Overview = ({ customer, orders }: OverviewProps) => {
                   </span>
                   <span className="uppercase text-base-regular text-ui-fg-subtle">
                     Saved
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-y-4">
+                <h3 className="text-large-semi">Coins</h3>
+                <div className="flex items-end gap-x-2">
+                  <span
+                    className="text-3xl-semi leading-none text-ui-fg-interactive"
+                    data-testid="coin-balance"
+                    data-value={coinBalance}
+                  >
+                    {coinBalance.toLocaleString()}
+                  </span>
+                  <span className="uppercase text-base-regular text-ui-fg-subtle">
+                    Balance
                   </span>
                 </div>
               </div>

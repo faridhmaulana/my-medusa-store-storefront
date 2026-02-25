@@ -7,6 +7,7 @@ import {
   Transition,
 } from "@headlessui/react"
 import { convertToLocale } from "@lib/util/money"
+import { getVariantPointConfig, VariantPointConfig } from "@lib/data/coins"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
 import DeleteButton from "@modules/common/components/delete-button"
@@ -26,6 +27,33 @@ const CartDropdown = ({
     undefined
   )
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
+  const [pointConfigs, setPointConfigs] = useState<
+    Record<string, VariantPointConfig | null>
+  >({})
+
+  useEffect(() => {
+    if (!cartState?.items?.length) return
+
+    const variantIds = cartState.items
+      .map((item) => item.variant_id || item.variant?.id)
+      .filter(Boolean) as string[]
+
+    const uniqueIds = [...new Set(variantIds)]
+
+    Promise.all(
+      uniqueIds.map((id) =>
+        getVariantPointConfig(id)
+          .then((config) => [id, config] as const)
+          .catch(() => [id, null] as const)
+      )
+    ).then((results) => {
+      const map: Record<string, VariantPointConfig | null> = {}
+      for (const [id, config] of results) {
+        map[id] = config
+      }
+      setPointConfigs(map)
+    })
+  }, [cartState?.items])
 
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
@@ -159,6 +187,11 @@ const CartDropdown = ({
                                   item={item}
                                   style="tight"
                                   currencyCode={cartState.currency_code}
+                                  pointConfig={
+                                    pointConfigs[
+                                      item.variant_id || item.variant?.id || ""
+                                    ] ?? null
+                                  }
                                 />
                               </div>
                             </div>
@@ -180,16 +213,60 @@ const CartDropdown = ({
                       Subtotal{" "}
                       <span className="font-normal">(excl. taxes)</span>
                     </span>
-                    <span
-                      className="text-large-semi"
-                      data-testid="cart-subtotal"
-                      data-value={subtotal}
-                    >
-                      {convertToLocale({
-                        amount: subtotal,
-                        currency_code: cartState.currency_code,
-                      })}
-                    </span>
+                    <div className="flex flex-col items-end">
+                      {(() => {
+                        let coinSub = 0
+                        let coinCurrencyTotal = 0
+                        if (cartState.items?.length) {
+                          for (const item of cartState.items) {
+                            const vid =
+                              item.variant_id || item.variant?.id || ""
+                            const config = pointConfigs[vid] ?? null
+                            if (
+                              config?.payment_type === "points" &&
+                              config.point_price != null
+                            ) {
+                              coinSub += config.point_price * item.quantity
+                              coinCurrencyTotal += item.total ?? 0
+                            }
+                          }
+                        }
+                        const currSub = subtotal - coinCurrencyTotal
+                        return (
+                          <>
+                            {currSub > 0 && (
+                              <span
+                                className="text-large-semi"
+                                data-testid="cart-subtotal"
+                                data-value={currSub}
+                              >
+                                {convertToLocale({
+                                  amount: currSub,
+                                  currency_code: cartState.currency_code,
+                                })}
+                              </span>
+                            )}
+                            {coinSub > 0 && (
+                              <span className="text-large-semi text-amber-600 font-semibold">
+                                {coinSub.toLocaleString()} Coins
+                              </span>
+                            )}
+                            {currSub <= 0 && coinSub <= 0 && (
+                              <span
+                                className="text-large-semi"
+                                data-testid="cart-subtotal"
+                                data-value={0}
+                              >
+                                {convertToLocale({
+                                  amount: 0,
+                                  currency_code: cartState.currency_code,
+                                })}
+                              </span>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </div>
                   </div>
                   <LocalizedClientLink href="/cart" passHref>
                     <Button

@@ -2,6 +2,7 @@
 
 import { Table, Text, clx } from "@medusajs/ui"
 import { updateLineItem } from "@lib/data/cart"
+import { getVariantPointConfig, VariantPointConfig } from "@lib/data/coins"
 import { HttpTypes } from "@medusajs/types"
 import CartItemSelect from "@modules/cart/components/cart-item-select"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -12,17 +13,40 @@ import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Spinner from "@modules/common/icons/spinner"
 import Thumbnail from "@modules/products/components/thumbnail"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 type ItemProps = {
   item: HttpTypes.StoreCartLineItem
   type?: "full" | "preview"
   currencyCode: string
+  showCoinToggle?: boolean
+  coinSelected?: boolean
+  onCoinToggle?: () => void
 }
 
-const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
+const Item = ({
+  item,
+  type = "full",
+  currencyCode,
+  showCoinToggle,
+  coinSelected,
+  onCoinToggle,
+}: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pointConfig, setPointConfig] = useState<VariantPointConfig | null>(
+    null
+  )
+
+  const variantId = item.variant_id || item.variant?.id
+
+  useEffect(() => {
+    if (!variantId) return
+
+    getVariantPointConfig(variantId)
+      .then((config) => setPointConfig(config))
+      .catch(() => setPointConfig(null))
+  }, [variantId])
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
@@ -70,6 +94,26 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {showCoinToggle &&
+          pointConfig?.payment_type === "both" &&
+          pointConfig?.point_price != null && (
+            <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={coinSelected || false}
+                onChange={onCoinToggle}
+                className="accent-amber-500 w-3.5 h-3.5"
+              />
+              <span className="text-xs text-amber-700">
+                Pay with {(pointConfig.point_price * item.quantity).toLocaleString()} Coins
+              </span>
+            </label>
+          )}
+        {showCoinToggle && pointConfig?.payment_type === "points" && (
+          <span className="text-xs text-amber-600 mt-1.5 block">
+            Coins only
+          </span>
+        )}
       </Table.Cell>
 
       {type === "full" && (
@@ -110,6 +154,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             item={item}
             style="tight"
             currencyCode={currencyCode}
+            pointConfig={pointConfig}
           />
         </Table.Cell>
       )}
@@ -127,6 +172,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
                 item={item}
                 style="tight"
                 currencyCode={currencyCode}
+                pointConfig={pointConfig}
               />
             </span>
           )}
@@ -134,6 +180,8 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             item={item}
             style="tight"
             currencyCode={currencyCode}
+            pointConfig={pointConfig}
+            coinSelected={coinSelected}
           />
         </span>
       </Table.Cell>

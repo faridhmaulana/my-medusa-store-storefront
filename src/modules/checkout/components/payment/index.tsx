@@ -51,8 +51,12 @@ const Payment = ({
   const paidByGiftcard =
     cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0
 
+  const paidByCoins = !!cart?.metadata?.points_cost && cart?.total === 0
+
   const paymentReady =
-    (activeSession && cart?.shipping_methods.length !== 0) || paidByGiftcard
+    (activeSession && cart?.shipping_methods.length !== 0) ||
+    paidByGiftcard ||
+    paidByCoins
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -134,7 +138,7 @@ const Payment = ({
       </div>
       <div>
         <div className={isOpen ? "block" : "hidden"}>
-          {!paidByGiftcard && availablePaymentMethods?.length && (
+          {!paidByGiftcard && !paidByCoins && availablePaymentMethods?.length && (
             <>
               <RadioGroup
                 value={selectedPaymentMethod}
@@ -178,6 +182,20 @@ const Payment = ({
             </div>
           )}
 
+          {paidByCoins && (
+            <div className="flex flex-col w-1/3">
+              <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                Payment method
+              </Text>
+              <Text
+                className="txt-medium text-amber-600"
+                data-testid="payment-method-summary"
+              >
+                Coins ({cart.metadata.points_cost.toLocaleString()})
+              </Text>
+            </div>
+          )}
+
           <ErrorMessage
             error={error}
             data-testid="payment-method-error-message"
@@ -186,15 +204,26 @@ const Payment = ({
           <Button
             size="large"
             className="mt-6"
-            onClick={handleSubmit}
+            onClick={
+              paidByCoins
+                ? () =>
+                    router.push(
+                      pathname + "?" + createQueryString("step", "review"),
+                      { scroll: false }
+                    )
+                : handleSubmit
+            }
             isLoading={isLoading}
             disabled={
-              (isStripeLike(selectedPaymentMethod) && !cardComplete) ||
-              (!selectedPaymentMethod && !paidByGiftcard)
+              !paidByCoins &&
+              ((isStripeLike(selectedPaymentMethod) && !cardComplete) ||
+                (!selectedPaymentMethod && !paidByGiftcard))
             }
             data-testid="submit-payment-button"
           >
-            {!activeSession && isStripeLike(selectedPaymentMethod)
+            {paidByCoins
+              ? "Continue to review"
+              : !activeSession && isStripeLike(selectedPaymentMethod)
               ? " Enter card details"
               : "Continue to review"}
           </Button>
@@ -235,6 +264,18 @@ const Payment = ({
                   </Text>
                 </div>
               </div>
+            </div>
+          ) : paidByCoins ? (
+            <div className="flex flex-col w-1/3">
+              <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                Payment method
+              </Text>
+              <Text
+                className="txt-medium text-amber-600"
+                data-testid="payment-method-summary"
+              >
+                Coins ({cart.metadata.points_cost.toLocaleString()})
+              </Text>
             </div>
           ) : paidByGiftcard ? (
             <div className="flex flex-col w-1/3">

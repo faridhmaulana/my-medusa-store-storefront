@@ -1,6 +1,7 @@
 "use client"
 
 import { addToCart } from "@lib/data/cart"
+import { getVariantPointConfig, VariantPointConfig } from "@lib/data/coins"
 import { useIntersection } from "@lib/hooks/use-in-view"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
@@ -38,6 +39,9 @@ export default function ProductActions({
 
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [pointConfig, setPointConfig] = useState<VariantPointConfig | null>(
+    null
+  )
   const countryCode = useParams().countryCode as string
 
   // If there is only 1 variant, preselect the options
@@ -91,6 +95,22 @@ export default function ProductActions({
 
     router.replace(pathname + "?" + params.toString())
   }, [selectedVariant, isValidVariant])
+
+  // Fetch coin config for selected variant
+  useEffect(() => {
+    if (!selectedVariant?.id) {
+      setPointConfig(null)
+      return
+    }
+
+    getVariantPointConfig(selectedVariant.id)
+      .then((config) => {
+        setPointConfig(config)
+      })
+      .catch(() => {
+        setPointConfig(null)
+      })
+  }, [selectedVariant?.id])
 
   // check if the selected variant is in stock
   const inStock = useMemo(() => {
@@ -160,7 +180,11 @@ export default function ProductActions({
           )}
         </div>
 
-        <ProductPrice product={product} variant={selectedVariant} />
+        <ProductPrice
+          product={product}
+          variant={selectedVariant}
+          pointConfig={pointConfig}
+        />
 
         <Button
           onClick={handleAddToCart}

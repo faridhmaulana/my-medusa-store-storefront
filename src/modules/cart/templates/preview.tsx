@@ -5,6 +5,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Table, clx } from "@medusajs/ui"
 
 import Item from "@modules/cart/components/item"
+import { useCoinSelection } from "@modules/checkout/context/coin-selection-context"
 import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
 
 type ItemsTemplateProps = {
@@ -14,6 +15,8 @@ type ItemsTemplateProps = {
 const ItemsPreviewTemplate = ({ cart }: ItemsTemplateProps) => {
   const items = cart.items
   const hasOverflow = items && items.length > 4
+  const isRedeemed = !!(cart as any).metadata?.points_cost
+  const coinSelection = useCoinSelection()
 
   return (
     <div
@@ -30,12 +33,16 @@ const ItemsPreviewTemplate = ({ cart }: ItemsTemplateProps) => {
                   return (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
                 })
                 .map((item) => {
+                  const vid = item.variant_id || item.variant?.id || ""
                   return (
                     <Item
                       key={item.id}
                       item={item}
                       type="preview"
                       currencyCode={cart.currency_code}
+                      showCoinToggle={!isRedeemed}
+                      coinSelected={coinSelection.selections[vid] || false}
+                      onCoinToggle={() => coinSelection.toggleSelection(vid)}
                     />
                   )
                 })

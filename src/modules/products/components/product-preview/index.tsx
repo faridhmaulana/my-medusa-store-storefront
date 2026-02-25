@@ -1,6 +1,6 @@
 import { Text } from "@medusajs/ui"
-import { listProducts } from "@lib/data/products"
 import { getProductPrice } from "@lib/util/get-product-price"
+import { getVariantPointConfig } from "@lib/data/coins"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"
@@ -15,18 +15,19 @@ export default async function ProductPreview({
   isFeatured?: boolean
   region: HttpTypes.StoreRegion
 }) {
-  // const pricedProduct = await listProducts({
-  //   regionId: region.id,
-  //   queryParams: { id: [product.id!] },
-  // }).then(({ response }) => response.products[0])
-
-  // if (!pricedProduct) {
-  //   return null
-  // }
-
   const { cheapestPrice } = getProductPrice({
     product,
   })
+
+  const firstVariant = product.variants?.[0]
+  const pointConfig = firstVariant
+    ? await getVariantPointConfig(firstVariant.id).catch(() => null)
+    : null
+
+  const showCoinPrice =
+    pointConfig &&
+    pointConfig.payment_type !== "currency" &&
+    pointConfig.point_price != null
 
   return (
     <LocalizedClientLink href={`/products/${product.handle}`} className="group">
@@ -42,7 +43,14 @@ export default async function ProductPreview({
             {product.title}
           </Text>
           <div className="flex items-center gap-x-2">
-            {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
+            {showCoinPrice && (
+              <Text className="text-amber-600 txt-compact-medium font-semibold">
+                {pointConfig.point_price!.toLocaleString()} Coins
+              </Text>
+            )}
+            {cheapestPrice && pointConfig?.payment_type !== "points" && (
+              <PreviewPrice price={cheapestPrice} />
+            )}
           </div>
         </div>
       </div>

@@ -1,5 +1,9 @@
+"use client"
+
+import { getVariantPointConfig, VariantPointConfig } from "@lib/data/coins"
 import { HttpTypes } from "@medusajs/types"
 import { Table, Text } from "@medusajs/ui"
+import { useEffect, useState } from "react"
 
 import LineItemOptions from "@modules/common/components/line-item-options"
 import LineItemPrice from "@modules/common/components/line-item-price"
@@ -12,6 +16,21 @@ type ItemProps = {
 }
 
 const Item = ({ item, currencyCode }: ItemProps) => {
+  const [pointConfig, setPointConfig] = useState<VariantPointConfig | null>(
+    null
+  )
+
+  const variantId =
+    (item as any).variant_id || (item as any).variant?.id || null
+
+  useEffect(() => {
+    if (!variantId) return
+
+    getVariantPointConfig(variantId)
+      .then((config) => setPointConfig(config))
+      .catch(() => setPointConfig(null))
+  }, [variantId])
+
   return (
     <Table.Row className="w-full" data-testid="product-row">
       <Table.Cell className="!pl-0 p-4 w-24">
@@ -40,6 +59,7 @@ const Item = ({ item, currencyCode }: ItemProps) => {
               item={item}
               style="tight"
               currencyCode={currencyCode}
+              pointConfig={pointConfig}
             />
           </span>
 
@@ -47,6 +67,7 @@ const Item = ({ item, currencyCode }: ItemProps) => {
             item={item}
             style="tight"
             currencyCode={currencyCode}
+            pointConfig={pointConfig}
           />
         </span>
       </Table.Cell>
