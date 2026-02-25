@@ -30,10 +30,8 @@ const CoinRedemption = ({ cart, coinBalance }: CoinRedemptionProps) => {
 
     try {
       const selectedIds = getSelectedVariantIds()
-      await redeemCoinsOnCart(
-        cart.id,
-        selectedIds.length > 0 ? selectedIds : undefined
-      )
+      // Always send the array (empty or with IDs) for explicit selection
+      await redeemCoinsOnCart(cart.id, selectedIds)
     } catch (err: any) {
       setError(err.message || "Failed to redeem coins")
     } finally {

@@ -71,7 +71,8 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
       const config = pointConfigs[vid] ?? null
       if (config?.payment_type === "points" && config.point_price != null) {
         coinOnlySubtotal += config.point_price * item.quantity
-        coinItemsCurrencyTotal += item.total ?? 0
+        // Use unit_price * quantity, NOT item.total (which includes discounts)
+        coinItemsCurrencyTotal += item.unit_price * item.quantity
       }
     }
   }
