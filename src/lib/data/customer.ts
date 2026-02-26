@@ -69,26 +69,20 @@ export async function signup(_currentState: unknown, formData: FormData) {
   }
 
   try {
-    const token = await sdk.auth.register("customer", "emailpass", {
+    // Register with Supabase Auth Provider
+    // Customer creation and linking handled automatically by the provider
+    await sdk.auth.register("customer", "supabase", {
       email: customerForm.email,
       password: password,
+      first_name: customerForm.first_name,
+      last_name: customerForm.last_name,
+      phone: customerForm.phone,
     })
 
-    await setAuthToken(token as string)
-
-    const headers = {
-      ...(await getAuthHeaders()),
-    }
-
-    const { customer: createdCustomer } = await sdk.store.customer.create(
-      customerForm,
-      {},
-      headers
-    )
-
-    const loginToken = await sdk.auth.login("customer", "emailpass", {
+    // After registration, login to get a proper session
+    const loginToken = await sdk.auth.login("customer", "supabase", {
       email: customerForm.email,
-      password,
+      password: password,
     })
 
     await setAuthToken(loginToken as string)
@@ -98,7 +92,7 @@ export async function signup(_currentState: unknown, formData: FormData) {
 
     await transferCart()
 
-    return createdCustomer
+    return null // Success
   } catch (error: any) {
     return error.toString()
   }
@@ -109,8 +103,9 @@ export async function login(_currentState: unknown, formData: FormData) {
   const password = formData.get("password") as string
 
   try {
+    // Login with Supabase Auth Provider
     await sdk.auth
-      .login("customer", "emailpass", { email, password })
+      .login("customer", "supabase", { email, password })
       .then(async (token) => {
         await setAuthToken(token as string)
         const customerCacheTag = await getCacheTag("customers")
